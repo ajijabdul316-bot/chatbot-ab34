@@ -1,31 +1,60 @@
-
 import streamlit as st
 from google import genai
 
-st.set_page_config(page_title="AI Assistant", page_icon="🥀")
-st.title("Ai assistant 🥀")
+# Page Config
+st.set_page_config(page_title="Personal AI Assistant", page_icon="🤖", layout="centered")
 
-# Secrets se API Key automatic aayegi
-api_key = st.secrets["GEMINI_API_KEY"]
-client = genai.Client(api_key=api_key)
+# Title Header
+st.title("🤖 Personal AI Assistant")
 
+# Initialize Gemini Client using Streamlit Secrets
+@st.cache_resource
+def get_client():
+    return genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+
+try:
+    client = get_client()
+except Exception as e:
+    st.error("API Key configure nahi hai. Streamlit Cloud Secrets check karein!")
+    st.stop()
+
+# Initialize Chat History
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+# Display Previous Messages
+for msg in st.session_state.messages:
+    avatar = "👤" if msg["role"] == "user" else "⚡"
+    with st.chat_message(msg["role"], avatar=avatar):
+        st.markdown(msg["content"])
 
-if prompt := st.chat_input("Aapke hr swalo ka jawab milega"):
+# User Input
+if prompt := st.chat_input("Kuch bhi poocho..."):
+    # Add User Message to State and UI
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar="👤"):
         st.markdown(prompt)
 
-    response = client.models.generate_content(
-        model="gemini-3.8-flash",
-        contents=prompt
-    )
-    
-    with st.chat_message("assistant"):
-        st.markdown(response.text)
-    st.session_state.messages.append({"role": "assistant", "content": response.text})
+    # Generate Response with Auto-Fallback
+    with st.chat_message("assistant", avatar="⚡"):
+        with st.spinner("Thinking..."):
+            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash"]
+            response_text = None
+            
+            for model_name in models_to_try:
+                try:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=prompt
+                    )
+                    response_text = response.text
+                    break
+                except Exception:
+                    continue
+            
+            if response_text:
+                st.markdown(response_text)
+                st.session_state.messages.append({"role": "assistant", "content": response_text})
+            else:
+                st.error("Google server par abhi high demand hai. Kripya 10 seconds baad dobara try karein! ⏱️")
+                
