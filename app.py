@@ -3,7 +3,7 @@ import streamlit as st
 from google import genai
 
 st.set_page_config(page_title="AI Assistant", page_icon="🥀")
-st.title("Doraemn ka little brother")
+st.title("Ai assistant 🥀")
 
 # Secrets se API Key automatic aayegi
 api_key = st.secrets["GEMINI_API_KEY"]
